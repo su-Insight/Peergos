@@ -21,7 +21,7 @@ import peergos.server.storage.auth.BlockRequestAuthoriser;
 import peergos.shared.crypto.hash.Hasher;
 import peergos.shared.io.ipfs.MultiAddress;
 import peergos.shared.storage.*;
-import peergos.shared.storage.auth.BatCave;
+import peergos.shared.storage.auth.*;
 import peergos.shared.util.*;
 
 import java.io.*;
@@ -315,7 +315,11 @@ public class IpfsWrapper implements AutoCloseable {
         org.peergos.BlockRequestAuthoriser authoriser = (c, block, p, auth) -> {
             peergos.shared.io.ipfs.Cid source = peergos.shared.io.ipfs.Cid.decodePeerId(p.toString());
             peergos.shared.io.ipfs.Cid cid = peergos.shared.io.ipfs.Cid.decode(c.toString());
-            return blockAuth.allowRead(cid, block, source, auth).thenApply(resp -> resp)
+            Optional<BlockMetadata> blockMetadata = metaDB.get(cid);
+            if (blockMetadata.isEmpty())
+                return Futures.of(false);
+            List<BatId> bats = blockMetadata.get().batids;
+            return blockAuth.allowRead(cid, bats, source, auth)
                 .exceptionally(ex -> false);
         };
 
