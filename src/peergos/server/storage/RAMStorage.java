@@ -40,6 +40,11 @@ public class RAMStorage implements DeletableContentAddressedStorage {
     }
 
     @Override
+    public CompletableFuture<List<Cid>> ids() {
+        return CompletableFuture.completedFuture(List.of(new Cid(1, Cid.Codec.LibP2pKey, Multihash.Type.sha2_256, new byte[32])));
+    }
+
+    @Override
     public CompletableFuture<TransactionId> startTransaction(PublicKeyHash owner) {
         TransactionId tid = new TransactionId(Long.toString(System.currentTimeMillis()));
         openTransactions.put(tid, new ArrayList<>());

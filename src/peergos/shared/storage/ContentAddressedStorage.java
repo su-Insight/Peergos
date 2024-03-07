@@ -87,9 +87,15 @@ public interface ContentAddressedStorage {
 
     /**
      *
-     * @return The identity (hash of the public key) of the storage node we are talking to
+     * @return The identity (hash of the public key) of this server
      */
     CompletableFuture<Cid> id();
+
+    /**
+     *
+     * @return All previous and current identities (hash of the public key) of this server
+     */
+    CompletableFuture<List<Cid>> ids();
 
     /**
      *
@@ -254,6 +260,7 @@ public interface ContentAddressedStorage {
         private final HttpPoster poster;
         public static final String apiPrefix = "api/v0/";
         public static final String ID = "id";
+        public static final String IDS = "ids";
         public static final String BLOCKSTORE_PROPERTIES = "blockstore/props";
         public static final String AUTH_READS = "blockstore/auth-reads";
         public static final String AUTH_WRITES = "blockstore/auth";
@@ -310,6 +317,15 @@ public interface ContentAddressedStorage {
         public CompletableFuture<Cid> id() {
             return poster.get(apiPrefix + ID)
                     .thenApply(raw -> Cid.decodePeerId((String)((Map)JSONParser.parse(new String(raw))).get("ID")));
+        }
+
+        @Override
+        public CompletableFuture<List<Cid>> ids() {
+            return poster.get(apiPrefix + IDS)
+                    .thenApply(raw -> ((List<String>)((Map)JSONParser.parse(new String(raw))).get("IDS"))
+                            .stream()
+                            .map(Cid::decodePeerId)
+                            .collect(Collectors.toList()));
         }
 
         @Override
@@ -545,6 +561,11 @@ public interface ContentAddressedStorage {
         @Override
         public CompletableFuture<Cid> id() {
             return local.id();
+        }
+
+        @Override
+        public CompletableFuture<List<Cid>> ids() {
+            return local.ids();
         }
 
         @Override

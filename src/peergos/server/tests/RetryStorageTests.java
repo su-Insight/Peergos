@@ -42,6 +42,16 @@ public class RetryStorageTests {
         }
 
         @Override
+        public CompletableFuture<List<Cid>> ids() {
+            if(counter++ % retryLimit != 0) {
+                return CompletableFuture.failedFuture(new Error("failure!"));
+            }else{
+                counter=1;
+                return CompletableFuture.completedFuture(List.of(new Cid(1, Cid.Codec.LibP2pKey, Multihash.Type.sha2_256, new byte[32])));
+            }
+        }
+
+        @Override
         public CompletableFuture<TransactionId> startTransaction(PublicKeyHash owner) {
             if(counter++ % retryLimit != 0) {
                 return CompletableFuture.failedFuture(new Error("failure!"));

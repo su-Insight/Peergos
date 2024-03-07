@@ -135,6 +135,11 @@ public class OpLog implements Cborable, Account, MutablePointers, ContentAddress
     }
 
     @Override
+    public CompletableFuture<List<Cid>> ids() {
+        throw new IllegalStateException("Unsupported operation!");
+    }
+
+    @Override
     public CompletableFuture<TransactionId> startTransaction(PublicKeyHash owner) {
         return Futures.of(new TransactionId("1"));
     }

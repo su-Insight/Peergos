@@ -2,14 +2,16 @@ package peergos.server.storage;
 
 import com.sun.net.httpserver.HttpServer;
 import io.ipfs.cid.*;
+import io.ipfs.cid.Cid;
 import io.libp2p.core.PeerId;
-import io.libp2p.core.crypto.PrivKey;
+import io.libp2p.core.crypto.*;
 import org.peergos.*;
 import org.peergos.config.*;
 import org.peergos.config.Filter;
 import org.peergos.net.*;
 import org.peergos.protocol.dht.DatabaseRecordStore;
 import org.peergos.protocol.http.HttpProtocol;
+import org.peergos.protocol.ipns.*;
 import org.peergos.util.JSONParser;
 import peergos.server.AggregatedMetrics;
 import peergos.server.Builder;
@@ -19,7 +21,8 @@ import peergos.server.util.*;
 import peergos.server.util.Args;
 import peergos.server.storage.auth.BlockRequestAuthoriser;
 import peergos.shared.crypto.hash.Hasher;
-import peergos.shared.io.ipfs.MultiAddress;
+import peergos.shared.io.ipfs.*;
+import peergos.shared.resolution.*;
 import peergos.shared.storage.*;
 import peergos.shared.storage.auth.*;
 import peergos.shared.util.*;
@@ -29,6 +32,7 @@ import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
+import java.time.*;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.logging.*;
@@ -300,10 +304,38 @@ public class IpfsWrapper implements AutoCloseable {
         Hasher hasher = Builder.initCrypto().hasher;
         BlockRequestAuthoriser blockAuth = Builder.blockAuthoriser(args, batStore, hasher);
         BlockMetadataStore metaDB = Builder.buildBlockMetadata(args);
-        return launch(args, blockAuth, metaDB);
+        JdbcServerIdentityStore ids = JdbcServerIdentityStore.build(Builder.getDBConnector(args, "serverids-file"), sqlCommands);
+        return launch(args, blockAuth, metaDB, ids);
     }
 
-    public static IpfsWrapper launch(Args args, BlockRequestAuthoriser blockAuth, BlockMetadataStore metaDB) {
+    private void startIdPublisher(ServerIdentityStore ids) {
+        Thread publisher = new Thread(() -> {
+            while (true) {
+                try {
+                    List<PeerId> all = ids.getIdentities();
+                    for (PeerId id : all) {
+                        byte[] signedIpnsRecord = ids.getRecord(id);
+                        embeddedIpfs.publishPresignedRecord(io.ipfs.multihash.Multihash.deserialize(id.getBytes()), signedIpnsRecord).join();
+                    }
+                } catch (Exception e) {
+                    LOG.log(Level.SEVERE, e, e::getMessage);
+                }
+                try {
+                    Thread.sleep(6 * 3600 * 1000);
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                }
+            }
+        }, "Server Identity IPNS Publisher");
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            publisher.interrupt();
+        }, "Server Identity IPNS Publisher - shutdown"));
+        publisher.setDaemon(true);
+        publisher.start();
+    }
+
+    public static IpfsWrapper launch(Args args, BlockRequestAuthoriser blockAuth, BlockMetadataStore metaDB,
+                                     ServerIdentityStore ids) {
         Path ipfsDir = getIpfsDir(args);
         LOG.info("Using IPFS dir " + ipfsDir);
 
@@ -311,6 +343,29 @@ public class IpfsWrapper implements AutoCloseable {
 
         IpfsWrapper ipfsWrapper = new IpfsWrapper(ipfsDir, ipfsConfigParams);
         Config config = ipfsWrapper.configure();
+        // use identity from db if present, otherwise move to db
+        List<PeerId> ourIds = ids.getIdentities();
+        if (ourIds.isEmpty()) {
+            // initialise id db with our current peer id and sign an ipns record
+            PrivKey peerPrivate = KeyKt.unmarshalPrivateKey(config.identity.privKeyProtobuf);
+            int years = 1;
+            LocalDateTime expiry = LocalDateTime.now().plusYears(years);
+            long ttlNanos = years * 365L * 24 * 3600 * 1000_000_000;
+            int sequence = 1;
+            ResolutionData ipnsValue = new ResolutionData(Optional.empty(),
+                    false, Optional.empty(), sequence);
+            byte[] value = ipnsValue.serialize();
+            byte[] signedRecord = IPNS.createSignedRecord(value, expiry, sequence, ttlNanos, peerPrivate);
+            ids.addIdentity(peerPrivate, signedRecord);
+        } else {
+            // make sure we use the latest peerid from the db as the source of truth
+            PeerId current = ourIds.get(ourIds.size() - 1);
+            byte[] privateKeyProto = ids.getPrivateKey(current);
+            ipfsConfigParams = ipfsConfigParams.withIdentity(Optional.of(new IdentitySection(privateKeyProto, current)));
+            ipfsWrapper = new IpfsWrapper(ipfsDir, ipfsConfigParams);
+            config = ipfsWrapper.configure();
+        }
+
         LOG.info("Starting Nabu version: " + APIHandler.CURRENT_VERSION + ", peerid: " + config.identity.peerId);
         org.peergos.BlockRequestAuthoriser authoriser = (c, p, auth) -> {
             peergos.shared.io.ipfs.Cid source = peergos.shared.io.ipfs.Cid.decodePeerId(p.toString());
@@ -371,6 +426,7 @@ public class IpfsWrapper implements AutoCloseable {
         }
         Thread shutdownHook = new Thread(ipfsWrapper::stop);
         Runtime.getRuntime().addShutdownHook(shutdownHook);
+        ipfsWrapper.startIdPublisher(ids);
         return ipfsWrapper;
     }
 

@@ -215,7 +215,7 @@ public class NetworkAccess {
         return localDht.blockStoreProperties()
                 .exceptionally(t -> BlockStoreProperties.empty())
                 .thenCompose(bp -> bp.useDirectBlockStore() ?
-                        localDht.id().thenApply(id -> new DirectS3BlockStore(bp, direct, localDht, id, core, hasher)) :
+                        localDht.ids().thenApply(ids -> new DirectS3BlockStore(bp, direct, localDht, ids, core, hasher)) :
                         Futures.of(localDht));
     }
 

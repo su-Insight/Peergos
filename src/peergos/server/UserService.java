@@ -28,7 +28,6 @@ import java.net.*;
 import java.nio.file.*;
 import java.security.*;
 import java.security.cert.*;
-import java.util.concurrent.*;
 
 public class UserService {
 	private static final Logger LOG = Logging.LOG();
@@ -233,7 +232,7 @@ public class UserService {
         }
 
         addHandler(localhostServer, tlsServer, Constants.DHT_URL,
-                new DHTHandler(storage, crypto.hasher, (h, i) -> true, isPublicServer),
+                new StorageHandler(storage, crypto.hasher, (h, i) -> true, isPublicServer),
                 basicAuth, local, host, nodeId, false);
         addHandler(localhostServer, tlsServer, "/" + Constants.BATS_URL,
                 new BatCaveHandler(this.bats, coreNode, storage, isPublicServer), basicAuth, local, host, nodeId, false);

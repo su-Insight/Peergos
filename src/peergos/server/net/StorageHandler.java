@@ -24,7 +24,7 @@ import java.util.*;
 import java.util.function.*;
 import java.util.stream.*;
 
-public class DHTHandler implements HttpHandler {
+public class StorageHandler implements HttpHandler {
 	private static final Logger LOG = Logging.LOG();
 
     private static final boolean LOGGING = true;
@@ -34,11 +34,11 @@ public class DHTHandler implements HttpHandler {
     private final String apiPrefix;
     private final boolean isPublicServer;
 
-    public DHTHandler(ContentAddressedStorage dht,
-                      Hasher hasher,
-                      BiFunction<PublicKeyHash, Integer, Boolean> keyFilter,
-                      String apiPrefix,
-                      boolean isPublicServer) {
+    public StorageHandler(ContentAddressedStorage dht,
+                          Hasher hasher,
+                          BiFunction<PublicKeyHash, Integer, Boolean> keyFilter,
+                          String apiPrefix,
+                          boolean isPublicServer) {
         this.dht = dht;
         this.hasher = hasher;
         this.keyFilter = keyFilter;
@@ -46,10 +46,10 @@ public class DHTHandler implements HttpHandler {
         this.isPublicServer = isPublicServer;
     }
 
-    public DHTHandler(ContentAddressedStorage dht,
-                      Hasher hasher,
-                      BiFunction<PublicKeyHash, Integer, Boolean> keyFilter,
-                      boolean isPublicServer) {
+    public StorageHandler(ContentAddressedStorage dht,
+                          Hasher hasher,
+                          BiFunction<PublicKeyHash, Integer, Boolean> keyFilter,
+                          boolean isPublicServer) {
         this(dht, hasher, keyFilter, "/api/v0/", isPublicServer);
     }
 
@@ -103,7 +103,7 @@ public class DHTHandler implements HttpHandler {
                     break;
                 }
                 case TRANSACTION_START: {
-                    AggregatedMetrics.DHT_TRANSACTION_START.inc();
+                    AggregatedMetrics.STORAGE_TRANSACTION_START.inc();
                     PublicKeyHash ownerHash = PublicKeyHash.fromString(last.apply("owner"));
                     dht.startTransaction(ownerHash).thenAccept(tid -> {
                         replyJson(httpExchange, tid.toString(), Optional.empty());
@@ -111,7 +111,7 @@ public class DHTHandler implements HttpHandler {
                     break;
                 }
                 case TRANSACTION_CLOSE: {
-                    AggregatedMetrics.DHT_TRANSACTION_CLOSE.inc();
+                    AggregatedMetrics.STORAGE_TRANSACTION_CLOSE.inc();
                     PublicKeyHash ownerHash = PublicKeyHash.fromString(last.apply("owner"));
                     TransactionId tid = new TransactionId(args.get(0));
                     dht.closeTransaction(ownerHash, tid).thenAccept(b -> {
@@ -120,8 +120,8 @@ public class DHTHandler implements HttpHandler {
                     break;
                 }
                 case CHAMP_GET: {
-                    AggregatedMetrics.DHT_CHAMP_GET.inc();
-                    Histogram.Timer timer = AggregatedMetrics.DHT_CHAMP_GET_DURATION.labels("duration").startTimer();
+                    AggregatedMetrics.STORAGE_CHAMP_GET.inc();
+                    Histogram.Timer timer = AggregatedMetrics.STORAGE_CHAMP_GET_DURATION.labels("duration").startTimer();
                     PublicKeyHash ownerHash = PublicKeyHash.fromString(last.apply("owner"));
                     Cid root = Cid.decode(args.get(0));
                     byte[] champKey = ArrayOps.hexToBytes(args.get(1));
@@ -139,7 +139,7 @@ public class DHTHandler implements HttpHandler {
                     break;
                 }
                 case BLOCK_PUT: {
-                    AggregatedMetrics.DHT_BLOCK_PUT.inc();
+                    AggregatedMetrics.STORAGE_BLOCK_PUT.inc();
                     PublicKeyHash ownerHash = PublicKeyHash.fromString(last.apply("owner"));
                     TransactionId tid = new TransactionId(last.apply("transaction"));
                     PublicKeyHash writerHash = PublicKeyHash.fromString(last.apply("writer"));
@@ -208,7 +208,7 @@ public class DHTHandler implements HttpHandler {
                     break;
                 }
                 case BLOCK_GET:{
-                    AggregatedMetrics.DHT_BLOCK_GET.inc();
+                    AggregatedMetrics.STORAGE_BLOCK_GET.inc();
                     PublicKeyHash ownerHash = PublicKeyHash.fromString(last.apply("owner"));
                     Cid hash = Cid.decode(args.get(0));
                     Optional<BatWithId> bat = params.containsKey("bat") ?
@@ -222,7 +222,7 @@ public class DHTHandler implements HttpHandler {
                     break;
                 }
                 case BLOCK_STAT: {
-                    AggregatedMetrics.DHT_BLOCK_STAT.inc();
+                    AggregatedMetrics.STORAGE_BLOCK_STAT.inc();
                     Multihash block = Cid.decode(args.get(0));
                     dht.getSize(block).thenAccept(sizeOpt -> {
                         Map<String, Object> res = new HashMap<>();
@@ -233,9 +233,20 @@ public class DHTHandler implements HttpHandler {
                     break;
                 }
                 case ID: {
-                    AggregatedMetrics.DHT_ID.inc();
+                    AggregatedMetrics.STORAGE_ID.inc();
                     dht.id().thenAccept(id -> {
                         Object json = wrapHash("ID", id);
+                        replyJson(httpExchange, JSONParser.toString(json), Optional.empty());
+                    }).exceptionally(Futures::logAndThrow).get();
+                    break;
+                }
+                case IDS: {
+                    AggregatedMetrics.STORAGE_IDS.inc();
+                    dht.ids().thenAccept(ids -> {
+                        Map<String, Object> json = new TreeMap<>();
+                        json.put("IDS", ids.stream()
+                                .map(x -> x.toString())
+                                .collect(Collectors.toList()));
                         replyJson(httpExchange, JSONParser.toString(json), Optional.empty());
                     }).exceptionally(Futures::logAndThrow).get();
                     break;

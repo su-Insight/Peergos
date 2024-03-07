@@ -68,6 +68,11 @@ public interface SqlSupplier {
                 "tid varchar(64) not null, owner varchar(64) not null, hash varchar(64) not null, time " + sqlInteger()+");";
     }
 
+    default String createServerIdentitiesTableCommand() {
+        return "CREATE TABLE IF NOT EXISTS serverids (" +
+                "peerid varchar(64) primary key not null, private varchar(512) not null, record varchar(1024) not null);";
+    }
+
     default String createBlockMetadataStoreTableCommand() {
         return "CREATE TABLE IF NOT EXISTS blockmetadata (cid " + getByteArrayType() + " primary key not null, " +
                 "version varchar(160)," +

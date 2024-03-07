@@ -31,6 +31,11 @@ public class NonWriteThroughStorage implements ContentAddressedStorage {
     }
 
     @Override
+    public CompletableFuture<List<Cid>> ids() {
+        return source.ids();
+    }
+
+    @Override
     public CompletableFuture<TransactionId> startTransaction(PublicKeyHash owner) {
         return modifications.startTransaction(owner);
     }

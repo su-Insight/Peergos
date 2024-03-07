@@ -95,6 +95,7 @@ public class S3BlockStorage implements DeletableContentAddressedStorage {
             .register();
 
     private final Cid id, p2pGetId;
+    private final List<Cid> ids;
     private final String region, bucket, folder, regionEndpoint, host;
     private final boolean useHttps;
     private final String accessKeyId, secretKey;
@@ -110,7 +111,7 @@ public class S3BlockStorage implements DeletableContentAddressedStorage {
     private CoreNode pki;
 
     public S3BlockStorage(S3Config config,
-                          Cid id,
+                          List<Cid> ids,
                           BlockStoreProperties props,
                           TransactionStore transactions,
                           BlockRequestAuthoriser authoriser,
@@ -119,7 +120,8 @@ public class S3BlockStorage implements DeletableContentAddressedStorage {
                           Hasher hasher,
                           DeletableContentAddressedStorage p2pFallback,
                           DeletableContentAddressedStorage bloomTarget) {
-        this.id = id;
+        this.ids = ids;
+        this.id = ids.get(ids.size() - 1);
         this.p2pGetId = p2pFallback.id().join();
         this.region = config.region;
         this.bucket = config.bucket;
@@ -572,6 +574,11 @@ public class S3BlockStorage implements DeletableContentAddressedStorage {
     }
 
     @Override
+    public CompletableFuture<List<Cid>> ids() {
+        return Futures.of(ids);
+    }
+
+    @Override
     public CompletableFuture<TransactionId> startTransaction(PublicKeyHash owner) {
         return CompletableFuture.completedFuture(transactions.startTransaction(owner));
     }
@@ -935,7 +942,7 @@ public class S3BlockStorage implements DeletableContentAddressedStorage {
         TransactionStore transactions = JdbcTransactionStore.build(transactionsDb, sqlCommands);
         BlockRequestAuthoriser authoriser = (c, b, s, auth) -> Futures.of(true);
         BlockMetadataStore meta = Builder.buildBlockMetadata(a);
-        S3BlockStorage s3 = new S3BlockStorage(config, Cid.decode(a.getArg("ipfs.id")),
+        S3BlockStorage s3 = new S3BlockStorage(config, List.of(Cid.decode(a.getArg("ipfs.id"))),
                 BlockStoreProperties.empty(), transactions, authoriser, meta,
                 new RamBlockCache(1024, 100), hasher, new RAMStorage(hasher), new RAMStorage(hasher));
         JdbcIpnsAndSocial rawPointers = new JdbcIpnsAndSocial(database, sqlCommands);

@@ -335,15 +335,12 @@ public class Main extends Builder {
                     BatCave batStore = new JdbcBatCave(getDBConnector(args, "bat-store", transactionDb), sqlCommands);
                     BlockRequestAuthoriser authoriser = Builder.blockAuthoriser(args, batStore, crypto.hasher);
 
+                    if (S3Config.useS3(args))
+                        throw new IllegalStateException("S3 not supported for PKI!");
                     ContentAddressedStorage storage = useIPFS ?
                             new ContentAddressedStorage.HTTP(Builder.buildIpfsApi(args), false, crypto.hasher) :
-                            S3Config.useS3(args) ?
-                                    new S3BlockStorage(S3Config.build(args, Optional.empty()), Cid.decode(args.getArg("ipfs.id")),
-                                            BlockStoreProperties.empty(), transactions, authoriser, new RamBlockMetadataStore(),
-                                            new RamBlockCache(1024, 1000), crypto.hasher, new DeletableContentAddressedStorage.HTTP(Builder.buildIpfsApi(args), false, crypto.hasher),
-                                            new DeletableContentAddressedStorage.HTTP(Builder.buildIpfsApi(args), false, crypto.hasher)) :
-                                    new FileContentAddressedStorage(blockstorePath(args),
-                                            transactions, authoriser, crypto.hasher);
+                            new FileContentAddressedStorage(blockstorePath(args),
+                                    transactions, authoriser, crypto.hasher);
                     Multihash pkiIpfsNodeId = storage.id().get();
 
                     if (ipfs != null)
@@ -501,7 +498,8 @@ public class Main extends Builder {
             BatCave batStore = new JdbcBatCave(getDBConnector(a, "bat-store", dbConnectionPool), sqlCommands);
             BlockRequestAuthoriser blockAuth = blockAuthoriser(a, batStore, hasher);
             BlockMetadataStore meta = buildBlockMetadata(a);
-            IpfsWrapper ipfsWrapper = useIPFS ? IpfsWrapper.launch(a, blockAuth, meta) : null;
+            JdbcServerIdentityStore ids = JdbcServerIdentityStore.build(getDBConnector(a, "serverids-file", dbConnectionPool), sqlCommands);
+            IpfsWrapper ipfsWrapper = useIPFS ? IpfsWrapper.launch(a, blockAuth, meta, ids) : null;
 
             boolean doExportAggregatedMetrics = a.getBoolean("collect-metrics");
             if (doExportAggregatedMetrics) {
@@ -523,7 +521,8 @@ public class Main extends Builder {
 
             TransactionStore transactions = buildTransactionStore(a, dbConnectionPool);
 
-            DeletableContentAddressedStorage localStorage = buildLocalStorage(a, meta, transactions, blockAuth, crypto.hasher);
+            DeletableContentAddressedStorage localStorage = buildLocalStorage(a, meta, transactions, blockAuth,
+                    ids, crypto.hasher);
             JdbcIpnsAndSocial rawPointers = buildRawPointers(a,
                     getDBConnector(a, "mutable-pointers-file", dbConnectionPool));
 
@@ -565,6 +564,10 @@ public class Main extends Builder {
             core.initialize();
 
             boolean isPki = Cid.decodePeerId(a.getArg("pki-node-id")).equals(nodeId);
+            if (useIPFS && ids.getIdentities().size() > 1) {
+                // TODO start proxies for old server identities if any local users haven't updated pki to current id
+
+            }
             QuotaAdmin userQuotas = buildSpaceQuotas(a, localStorage, core,
                     getDBConnector(a, "space-requests-sql-file", dbConnectionPool),
                     getDBConnector(a, "quotas-sql-file", dbConnectionPool), isPki, localhostApi);

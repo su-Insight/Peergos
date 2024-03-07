@@ -1,6 +1,7 @@
 package peergos.server;
 
 import com.zaxxer.hikari.*;
+import io.libp2p.core.*;
 import peergos.server.corenode.*;
 import peergos.server.crypto.*;
 import peergos.server.crypto.asymmetric.curve25519.*;
@@ -35,9 +36,11 @@ import java.io.*;
 import java.net.*;
 import java.nio.file.*;
 import java.sql.*;
+import java.sql.Connection;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.*;
+import java.util.stream.*;
 
 public class Builder {
 
@@ -207,13 +210,16 @@ public class Builder {
                                                                      BlockMetadataStore meta,
                                                                      TransactionStore transactions,
                                                                      BlockRequestAuthoriser authoriser,
+                                                                     ServerIdentityStore ids,
                                                                      Hasher hasher) throws SQLException {
         boolean useIPFS = a.getBoolean("useIPFS");
         boolean enableGC = a.getBoolean("enable-gc", false);
         boolean useS3 = S3Config.useS3(a);
         JavaPoster ipfsApi = buildIpfsApi(a);
+        DeletableContentAddressedStorage.HTTP http = new DeletableContentAddressedStorage.HTTP(ipfsApi, false, hasher);
+        List<PeerId> ourIds = ids.getIdentities();
+        MultiIdStorage ipfs = new MultiIdStorage(http, ourIds);
         if (useIPFS) {
-            DeletableContentAddressedStorage.HTTP ipfs = new DeletableContentAddressedStorage.HTTP(ipfsApi, false, hasher);
             if (useS3) {
                 // IPFS is already running separately, we can still use an S3BlockStorage
                 S3Config config = S3Config.build(a, Optional.empty());
@@ -221,7 +227,7 @@ public class Builder {
                 TransactionalIpfs p2pBlockRetriever = new TransactionalIpfs(ipfs, transactions, authoriser, ipfs.id().join(), hasher);
 
                 FileBlockCache cborCache = new FileBlockCache(a.fromPeergosDir("block-cache-dir", "block-cache"), 1024 * 1024 * 1024L);
-                S3BlockStorage s3 = new S3BlockStorage(config, ipfs.id().join(), props, transactions, authoriser,
+                S3BlockStorage s3 = new S3BlockStorage(config, ipfs.ids().join(), props, transactions, authoriser,
                         meta, cborCache, hasher, p2pBlockRetriever, ipfs);
                 s3.updateMetadataStoreIfEmpty();
                 return s3;
@@ -241,8 +247,6 @@ public class Builder {
             if (useS3) {
                 if (enableGC)
                     throw new IllegalStateException("GC should be run separately when using S3!");
-                DeletableContentAddressedStorage.HTTP ipfs = new DeletableContentAddressedStorage.HTTP(ipfsApi, false, hasher);
-                Cid ourId = Cid.decode(a.getArg("ipfs.id"));
                 TransactionalIpfs p2pBlockRetriever = new TransactionalIpfs(ipfs, transactions, authoriser, ipfs.id().join(), hasher);
                 S3Config config = S3Config.build(a, Optional.empty());
                 BlockStoreProperties props = buildS3Properties(a);
@@ -251,7 +255,7 @@ public class Builder {
                 DeletableContentAddressedStorage.HTTP bloomTarget = new DeletableContentAddressedStorage.HTTP(bloomApiTarget, false, hasher);
 
                 FileBlockCache cborCache = new FileBlockCache(a.fromPeergosDir("block-cache-dir", "block-cache"), 10 * 1024 * 1024 * 1024L);
-                S3BlockStorage s3 = new S3BlockStorage(config, ourId, props, transactions, authoriser,
+                S3BlockStorage s3 = new S3BlockStorage(config, ipfs.ids().join(), props, transactions, authoriser,
                         meta, cborCache, hasher, p2pBlockRetriever, bloomTarget);
                 s3.updateMetadataStoreIfEmpty();
                 return s3;

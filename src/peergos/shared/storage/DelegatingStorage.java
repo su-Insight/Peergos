@@ -35,6 +35,11 @@ public abstract class DelegatingStorage implements ContentAddressedStorage {
     }
 
     @Override
+    public CompletableFuture<List<Cid>> ids() {
+        return target.ids();
+    }
+
+    @Override
     public CompletableFuture<TransactionId> startTransaction(PublicKeyHash owner) {
         return target.startTransaction(owner);
     }
