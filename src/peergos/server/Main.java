@@ -56,6 +56,8 @@ public class Main extends Builder {
 
     public static final Command.Arg ARG_TRANSACTIONS_SQL_FILE =
         new Command.Arg("transactions-sql-file", "The filename for the transactions datastore", false, "transactions.sql");
+    public static final Command.Arg ARG_SERVERIDS_SQL_FILE =
+            new Command.Arg("serverids-file", "The filename for the server ids datastore", false, "serverids.sql");
     public static final Command.Arg ARG_BAT_STORE =
                     new Command.Arg("bat-store", "The filename for the BAT store (or :memory: for ram based)", true, "bats.sql");
     public static final Command.Arg ARG_USE_IPFS =
@@ -89,7 +91,8 @@ public class Main extends Builder {
                     new Command.Arg("s3.region.endpoint", "Base url for S3 service", false),
                     new Command.Arg("block-store-filter", "Indicate blockstore filter type. Can be 'none', 'bloom', 'infini'", false),
                     new Command.Arg("block-store-filter-false-positive-rate", "The false positive rate to apply to the block-store-filter. ", false),
-                    ARG_BAT_STORE
+                    ARG_BAT_STORE,
+                    ARG_SERVERIDS_SQL_FILE
                     )
     );
 
@@ -119,6 +122,7 @@ public class Main extends Builder {
                     new Command.Arg("space-usage-sql-file", "The filename for the space usage datastore", true, "space-usage.sql"),
                     new Command.Arg("server-messages-sql-file", "The filename for the server messages datastore", true, "server-messages.sql"),
                     ARG_TRANSACTIONS_SQL_FILE,
+                    ARG_SERVERIDS_SQL_FILE,
                     new Command.Arg("webroot", "the path to the directory to serve as the web root", false),
                     new Command.Arg("default-quota", "default maximum storage per user", false, Long.toString(1024L * 1024 * 1024)),
                     new Command.Arg("admin-usernames", "A comma separated list of usernames who can approve local space requests", false),
@@ -302,6 +306,7 @@ public class Main extends Builder {
                     new Command.Arg("mutable-pointers-file", "The filename for the mutable pointers (or :memory: for ram based)", true, "mutable.sql"),
                     new Command.Arg("social-sql-file", "The filename for the follow requests (or :memory: for ram based)", true, "social.sql"),
                     new Command.Arg("transactions-sql-file", "The filename for the open transactions datastore", true, "transactions.sql"),
+                    ARG_SERVERIDS_SQL_FILE,
                     new Command.Arg("space-requests-sql-file", "The filename for the space requests datastore", true, "space-requests.sql"),
                     new Command.Arg("account-sql-file", "The filename for the login datastore", true, "login.sql"),
                     new Command.Arg("space-usage-sql-file", "The filename for the space usage datastore", true, "space-usage.sql"),
@@ -361,6 +366,7 @@ public class Main extends Builder {
                     new Command.Arg("mutable-pointers-file", "The filename for the mutable pointers (or :memory: for ram based)", true, "mutable.sql"),
                     new Command.Arg("social-sql-file", "The filename for the follow requests (or :memory: for ram based)", true, "social.sql"),
                     new Command.Arg("transactions-sql-file", "The filename for the open transactions datastore", true, "transactions.sql"),
+                    ARG_SERVERIDS_SQL_FILE,
                     new Command.Arg("space-requests-sql-file", "The filename for the space requests datastore", true, "space-requests.sql"),
                     new Command.Arg("space-usage-sql-file", "The filename for the space usage datastore", true, "space-usage.sql"),
                     ARG_IPFS_API_ADDRESS,

@@ -12,6 +12,8 @@ public interface SqlSupplier {
 
     String insertTransactionCommand();
 
+    String insertServerIdCommand();
+
     String getByteArrayType();
 
     String getSerialIdType();
