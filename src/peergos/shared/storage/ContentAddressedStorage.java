@@ -543,19 +543,19 @@ public interface ContentAddressedStorage {
     class Proxying implements ContentAddressedStorage {
         private final ContentAddressedStorage local;
         private final ContentAddressedStorageProxy p2p;
-        private final Multihash ourNodeId;
+        private final List<Cid> ourNodeIds;
         private final CoreNode core;
 
-        public Proxying(ContentAddressedStorage local, ContentAddressedStorageProxy p2p, Multihash ourNodeId, CoreNode core) {
+        public Proxying(ContentAddressedStorage local, ContentAddressedStorageProxy p2p, List<Cid> ourNodeIds, CoreNode core) {
             this.local = local;
             this.p2p = p2p;
-            this.ourNodeId = ourNodeId;
+            this.ourNodeIds = ourNodeIds;
             this.core = core;
         }
 
         @Override
         public ContentAddressedStorage directToOrigin() {
-            return new Proxying(local.directToOrigin(), p2p, ourNodeId, core);
+            return new Proxying(local.directToOrigin(), p2p, ourNodeIds, core);
         }
 
         @Override
@@ -592,7 +592,7 @@ public interface ContentAddressedStorage {
         @Override
         public CompletableFuture<TransactionId> startTransaction(PublicKeyHash owner) {
             return Proxy.redirectCall(core,
-                    ourNodeId,
+                    ourNodeIds,
                     owner,
                     () -> local.startTransaction(owner),
                     target -> p2p.startTransaction(target, owner));
@@ -601,7 +601,7 @@ public interface ContentAddressedStorage {
         @Override
         public CompletableFuture<Boolean> closeTransaction(PublicKeyHash owner, TransactionId tid) {
             return Proxy.redirectCall(core,
-                    ourNodeId,
+                    ourNodeIds,
                     owner,
                     () -> local.closeTransaction(owner, tid),
                     target -> p2p.closeTransaction(target, owner, tid));
@@ -610,7 +610,7 @@ public interface ContentAddressedStorage {
         @Override
         public CompletableFuture<List<byte[]>> getChampLookup(PublicKeyHash owner, Cid root, byte[] champKey, Optional<BatWithId> bat, Optional<Cid> committedRoot) {
             return Proxy.redirectCall(core,
-                    ourNodeId,
+                    ourNodeIds,
                     owner,
                     () -> local.getChampLookup(owner, root, champKey, bat, committedRoot),
                     target -> p2p.getChampLookup(target, owner, root, champKey, bat));
@@ -638,7 +638,7 @@ public interface ContentAddressedStorage {
                                                 List<byte[]> blocks,
                                                 TransactionId tid) {
             return Proxy.redirectCall(core,
-                    ourNodeId,
+                    ourNodeIds,
                     owner,
                     () -> local.put(owner, writer, signedHashes, blocks, tid),
                     target -> p2p.put(target, owner, writer, signedHashes, blocks, tid));
@@ -652,7 +652,7 @@ public interface ContentAddressedStorage {
                                                    TransactionId tid,
                                                    ProgressConsumer<Long> progressConsumer) {
             return Proxy.redirectCall(core,
-                    ourNodeId,
+                    ourNodeIds,
                     owner,
                     () -> local.putRaw(owner, writer, signatures, blocks, tid, progressConsumer),
                     target -> p2p.putRaw(target, owner, writer, signatures, blocks, tid, progressConsumer));

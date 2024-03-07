@@ -532,7 +532,7 @@ public class Main extends Builder {
             JdbcIpnsAndSocial rawPointers = buildRawPointers(a,
                     getDBConnector(a, "mutable-pointers-file", dbConnectionPool));
 
-            Multihash nodeId = localStorage.id().get();
+            List<Cid> nodeIds = localStorage.ids().get();
 
             MutablePointers localPointers = UserRepository.build(localStorage, rawPointers);
             MutablePointersProxy proxingMutable = new HttpMutablePointers(p2pHttpProxy, pkiServerNodeId);
@@ -569,7 +569,7 @@ public class Main extends Builder {
             localStorage.setPki(core);
             core.initialize();
 
-            boolean isPki = Cid.decodePeerId(a.getArg("pki-node-id")).equals(nodeId);
+            boolean isPki = nodeIds.contains(pkiServerNodeId);
             if (useIPFS && ids.getIdentities().size() > 1) {
                 // TODO start proxies for old server identities if any local users haven't updated pki to current id
 
@@ -577,7 +577,7 @@ public class Main extends Builder {
             QuotaAdmin userQuotas = buildSpaceQuotas(a, localStorage, core,
                     getDBConnector(a, "space-requests-sql-file", dbConnectionPool),
                     getDBConnector(a, "quotas-sql-file", dbConnectionPool), isPki, localhostApi);
-            CoreNode signupFilter = new SignUpFilter(core, userQuotas, nodeId, httpSpaceUsage, hasher,
+            CoreNode signupFilter = new SignUpFilter(core, userQuotas, nodeIds.get(nodeIds.size() - 1), httpSpaceUsage, hasher,
                     a.getInt("max-daily-paid-signups", isPaidInstance(a) ? 10 : 0), isPki);
 
             if (a.getBoolean("update-usage", true))
@@ -593,17 +593,17 @@ public class Main extends Builder {
             int maxCachedBlockSize = a.getInt("max-cached-block-size", 50 * 1024);
             ContentAddressedStorage filteringDht = new WriteFilter(localStorage, spaceChecker::allowWrite);
             ContentAddressedStorageProxy proxingDht = new ContentAddressedStorageProxy.HTTP(p2pHttpProxy);
-            ContentAddressedStorage p2pDht = new ContentAddressedStorage.Proxying(filteringDht, proxingDht, nodeId, core);
+            ContentAddressedStorage p2pDht = new ContentAddressedStorage.Proxying(filteringDht, proxingDht, nodeIds, core);
 
             Path blacklistPath = a.fromPeergosDir("blacklist_file", "blacklist.txt");
             PublicKeyBlackList blacklist = new UserBasedBlacklist(blacklistPath, core, localMutable, localStorage, hasher);
             MutablePointers blockingMutablePointers = new BlockingMutablePointers(localMutable, blacklist);
-            MutablePointers p2mMutable = new ProxyingMutablePointers(nodeId, core, blockingMutablePointers, proxingMutable);
+            MutablePointers p2mMutable = new ProxyingMutablePointers(nodeIds, core, blockingMutablePointers, proxingMutable);
 
             SocialNetworkProxy httpSocial = new HttpSocialNetwork(p2pHttpProxy, p2pHttpProxy);
 
             SocialNetwork local = UserRepository.build(localStorage, rawSocial);
-            SocialNetwork p2pSocial = new ProxyingSocialNetwork(nodeId, core, local, httpSocial);
+            SocialNetwork p2pSocial = new ProxyingSocialNetwork(nodeIds, core, local, httpSocial);
 
             Set<String> adminUsernames = Arrays.asList(a.getArg("admin-usernames", "").split(","))
                     .stream()
@@ -611,14 +611,14 @@ public class Main extends Builder {
                     .collect(Collectors.toSet());
             boolean enableWaitlist = a.getBoolean("enable-wait-list", false);
             Admin storageAdmin = new Admin(adminUsernames, userQuotas, core, localStorage, enableWaitlist);
-            ProxyingSpaceUsage p2pSpaceUsage = new ProxyingSpaceUsage(nodeId, corePropagator, spaceChecker, httpSpaceUsage);
+            ProxyingSpaceUsage p2pSpaceUsage = new ProxyingSpaceUsage(nodeIds, corePropagator, spaceChecker, httpSpaceUsage);
 
-            Account p2pAccount = new ProxyingAccount(nodeId, core, account, accountProxy);
+            Account p2pAccount = new ProxyingAccount(nodeIds, core, account, accountProxy);
             VerifyingAccount verifyingAccount = new VerifyingAccount(p2pAccount, core, localStorage);
             ContentAddressedStorage cachingStorage = new AuthedCachingStorage(p2pDht, blockAuth, hasher, blockCacheSize, maxCachedBlockSize);
             ContentAddressedStorage incomingP2PStorage = new GetBlockingStorage(cachingStorage);
 
-            ProxyingBatCave p2pBats = new ProxyingBatCave(nodeId, core, batStore, new HttpBatCave(p2pHttpProxy, p2pHttpProxy));
+            ProxyingBatCave p2pBats = new ProxyingBatCave(nodeIds, core, batStore, new HttpBatCave(p2pHttpProxy, p2pHttpProxy));
             ServerMessageStore serverMessages = new ServerMessageStore(getDBConnector(a, "server-messages-sql-file", dbConnectionPool),
                     sqlCommands, core, p2pDht);
             UserService localAPI = new UserService(cachingStorage, p2pBats, crypto, corePropagator, verifyingAccount,
@@ -645,13 +645,12 @@ public class Main extends Builder {
             List<String> appSubdomains = Arrays.asList(a.getArg("apps", "markup-viewer,email,calendar,todo-board,code-editor,pdf").split(","));
             List<String> frameDomains = paymentDomain.map(Arrays::asList).orElse(Collections.emptyList());
 
-            localAPI.initAndStart(localAPIAddress, nodeId, tlsProps, publicHostname, blockstoreDomains, frameDomains, appSubdomains,
+            localAPI.initAndStart(localAPIAddress, nodeIds, tlsProps, publicHostname, blockstoreDomains, frameDomains, appSubdomains,
                     a.getBoolean("include-csp", true), basicAuth, webroot, appDevTarget, useWebAssetCache, isPublicServer, maxConnectionQueue, handlerThreads);
-            p2pAPI.initAndStart(p2pAPIAddress, nodeId, Optional.empty(), publicHostname, blockstoreDomains, frameDomains, appSubdomains,
+            p2pAPI.initAndStart(p2pAPIAddress, nodeIds, Optional.empty(), publicHostname, blockstoreDomains, frameDomains, appSubdomains,
                     a.getBoolean("include-csp", true), basicAuth, webroot, Optional.empty(), useWebAssetCache, isPublicServer, maxConnectionQueue, handlerThreads);
 
-            boolean isPkiNode = nodeId.equals(pkiServerNodeId);
-            if (! isPkiNode && useIPFS) {
+            if (! isPki && useIPFS) {
                 // ipfs-nucleus doesn't implement swarm. We may reinstate these in the bootstrap list in the future
 //                int pkiNodeSwarmPort = a.getInt("pki.node.swarm.port");
 //                InetAddress pkiNodeIpAddress = InetAddress.getByName(a.getArg("pki.node.ipaddress"));

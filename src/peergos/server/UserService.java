@@ -11,7 +11,7 @@ import java.util.logging.Level;
 import com.sun.net.httpserver.*;
 import peergos.shared.*;
 import peergos.shared.corenode.*;
-import peergos.shared.io.ipfs.Multihash;
+import peergos.shared.io.ipfs.*;
 import peergos.shared.mutable.*;
 import peergos.shared.social.*;
 import peergos.shared.storage.*;
@@ -123,7 +123,7 @@ public class UserService {
     }
 
     public boolean initAndStart(InetSocketAddress local,
-                                Multihash nodeId,
+                                List<Cid> nodeIds,
                                 Optional<TlsProperties> tlsProps,
                                 Optional<String> publicHostname,
                                 List<String> blockstoreDomains,
@@ -233,28 +233,28 @@ public class UserService {
 
         addHandler(localhostServer, tlsServer, Constants.DHT_URL,
                 new StorageHandler(storage, crypto.hasher, (h, i) -> true, isPublicServer),
-                basicAuth, local, host, nodeId, false);
+                basicAuth, local, host, nodeIds, false);
         addHandler(localhostServer, tlsServer, "/" + Constants.BATS_URL,
-                new BatCaveHandler(this.bats, coreNode, storage, isPublicServer), basicAuth, local, host, nodeId, false);
+                new BatCaveHandler(this.bats, coreNode, storage, isPublicServer), basicAuth, local, host, nodeIds, false);
         addHandler(localhostServer, tlsServer, "/" + Constants.CORE_URL,
-                new CoreNodeHandler(this.coreNode, isPublicServer), basicAuth, local, host, nodeId, false);
+                new CoreNodeHandler(this.coreNode, isPublicServer), basicAuth, local, host, nodeIds, false);
         addHandler(localhostServer, tlsServer, "/" + Constants.SOCIAL_URL,
-                new SocialHandler(this.social, isPublicServer), basicAuth, local, host, nodeId, false);
+                new SocialHandler(this.social, isPublicServer), basicAuth, local, host, nodeIds, false);
         addHandler(localhostServer, tlsServer, "/" + Constants.MUTABLE_POINTERS_URL,
-                new MutationHandler(this.mutable, isPublicServer), basicAuth, local, host, nodeId, false);
+                new MutationHandler(this.mutable, isPublicServer), basicAuth, local, host, nodeIds, false);
         addHandler(localhostServer, tlsServer, "/" + Constants.LOGIN_URL,
-                new AccountHandler(this.account, isPublicServer), basicAuth, local, host, nodeId, false);
+                new AccountHandler(this.account, isPublicServer), basicAuth, local, host, nodeIds, false);
         addHandler(localhostServer, tlsServer, "/" + Constants.ADMIN_URL,
-                new AdminHandler(this.controller, isPublicServer), basicAuth, local, host, nodeId, false);
+                new AdminHandler(this.controller, isPublicServer), basicAuth, local, host, nodeIds, false);
         addHandler(localhostServer, tlsServer, "/" + Constants.SPACE_USAGE_URL,
-                new SpaceHandler(this.usage, isPublicServer), basicAuth, local, host, nodeId, false);
+                new SpaceHandler(this.usage, isPublicServer), basicAuth, local, host, nodeIds, false);
         addHandler(localhostServer, tlsServer, "/" + Constants.SERVER_MESSAGE_URL,
                 new ServerMessageHandler(this.serverMessages, coreNode, storage, isPublicServer),
-                basicAuth, local, host, nodeId, false);
+                basicAuth, local, host, nodeIds, false);
         addHandler(localhostServer, tlsServer, "/" + Constants.PUBLIC_FILES_URL,
                 new PublicFileHandler(crypto.hasher, coreNode, mutable, storage),
-                basicAuth, local, host, nodeId, false);
-        addHandler(localhostServer, tlsServer, UI_URL, handler, basicAuth, local, host, nodeId, true);
+                basicAuth, local, host, nodeIds, false);
+        addHandler(localhostServer, tlsServer, UI_URL, handler, basicAuth, local, host, nodeIds, true);
 
         localhostServer.setExecutor(Threads.newPool(handlerPoolSize, "api-handler-"));
         localhostServer.start();
@@ -274,15 +274,22 @@ public class UserService {
                                    Optional<String> basicAuth,
                                    InetSocketAddress local,
                                    CspHost host,
-                                   Multihash nodeId,
+                                   List<Cid> nodeIds,
                                    boolean allowSubdomains) {
         HttpHandler withAuth = basicAuth
                     .map(ba -> (HttpHandler) new BasicAuthHandler(ba, handler))
                     .orElse(handler);
         // Allow local requests, ones to the public host, and p2p reqs to our node
-        String barePeerId = new Multihash(nodeId.type, nodeId.getHash()).toBase58();
-        String wrappedPeerId = nodeId.toBase58();
-        List<String> allowedHosts = Arrays.asList("127.0.0.1:" + local.getPort(), host.host(), barePeerId, wrappedPeerId);
+        List<String> allowedHosts = new ArrayList<>();
+        allowedHosts.add("127.0.0.1:" + local.getPort());
+        allowedHosts.add(host.host());
+        for (Cid nodeId : nodeIds) {
+            String barePeerId = new Multihash(nodeId.type, nodeId.getHash()).toBase58();
+            allowedHosts.add(barePeerId);
+            String wrappedPeerId = nodeId.toBase58();
+            allowedHosts.add(wrappedPeerId);
+        }
+
         SubdomainHandler subdomainHandler = new SubdomainHandler(allowedHosts, withAuth, allowSubdomains);
         localhostServer.createContext(path, subdomainHandler);
         if (tlsServer != null) {

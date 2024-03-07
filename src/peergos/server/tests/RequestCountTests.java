@@ -32,7 +32,7 @@ public class RequestCountTests {
     public RequestCountTests() {
         RequestCountingStorage requestCounter = new RequestCountingStorage(service.storage);
         this.storageCounter = requestCounter;
-        CachingVerifyingStorage dhtClient = new CachingVerifyingStorage(requestCounter, 50 * 1024, 1_000, service.storage.id().join(), crypto.hasher);
+        CachingVerifyingStorage dhtClient = new CachingVerifyingStorage(requestCounter, 50 * 1024, 1_000, service.storage.ids().join(), crypto.hasher);
 
         BufferedStorage blockBuffer = new BufferedStorage(dhtClient, hasher);
         MutablePointers unbufferedMutable = new CachingPointers(service.mutable, 7_000);
