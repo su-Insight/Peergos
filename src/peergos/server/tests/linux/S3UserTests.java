@@ -94,7 +94,7 @@ public class S3UserTests extends UserTests {
         // start direct S3 node
         int peergosPort = TestPorts.getPort();
         Cid ourId = new ContentAddressedStorage.HTTP(new JavaPoster(new URL("http://localhost:" + ipfsApiPort), false), false, crypto.hasher).id().get();
-        Args peergosArgs = withS3(buildArgs())
+        Args peergosArgs = ipfsArgs
                 .with("port", "" + peergosPort)
                 .with("useIPFS", "false")
                 .with("enable-gc", "false")
