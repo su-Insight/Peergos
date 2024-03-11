@@ -890,6 +890,7 @@ public class Main extends Builder {
                     QuotaCLI.QUOTA,
                     UsageCLI.USAGE,
                     ServerMessages.SERVER_MESSAGES,
+                    ServerIdentity.SERVER_IDENTITY,
                     GATEWAY,
                     Mirror.MIRROR,
                     MIGRATE,

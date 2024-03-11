@@ -1,7 +1,6 @@
 package peergos.server.storage;
 
 import com.sun.net.httpserver.HttpServer;
-import io.ipfs.cid.*;
 import io.ipfs.cid.Cid;
 import io.libp2p.core.PeerId;
 import io.libp2p.core.crypto.*;
@@ -11,10 +10,9 @@ import org.peergos.config.Filter;
 import org.peergos.net.*;
 import org.peergos.protocol.dht.DatabaseRecordStore;
 import org.peergos.protocol.http.HttpProtocol;
-import org.peergos.protocol.ipns.*;
 import org.peergos.util.JSONParser;
+import peergos.server.*;
 import peergos.server.AggregatedMetrics;
-import peergos.server.Builder;
 import peergos.server.sql.SqlSupplier;
 import peergos.server.storage.auth.JdbcBatCave;
 import peergos.server.util.*;
@@ -22,7 +20,6 @@ import peergos.server.util.Args;
 import peergos.server.storage.auth.BlockRequestAuthoriser;
 import peergos.shared.crypto.hash.Hasher;
 import peergos.shared.io.ipfs.*;
-import peergos.shared.resolution.*;
 import peergos.shared.storage.*;
 import peergos.shared.storage.auth.*;
 import peergos.shared.util.*;
@@ -32,7 +29,6 @@ import java.net.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.sql.Connection;
-import java.time.*;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.logging.*;
@@ -348,14 +344,7 @@ public class IpfsWrapper implements AutoCloseable {
         if (ourIds.isEmpty()) {
             // initialise id db with our current peer id and sign an ipns record
             PrivKey peerPrivate = KeyKt.unmarshalPrivateKey(config.identity.privKeyProtobuf);
-            int years = 1;
-            LocalDateTime expiry = LocalDateTime.now().plusYears(years);
-            long ttlNanos = years * 365L * 24 * 3600 * 1000_000_000;
-            int sequence = 1;
-            ResolutionData ipnsValue = new ResolutionData(Optional.empty(),
-                    false, Optional.empty(), sequence);
-            byte[] value = ipnsValue.serialize();
-            byte[] signedRecord = IPNS.createSignedRecord(value, expiry, sequence, ttlNanos, peerPrivate);
+            byte[] signedRecord = ServerIdentity.generateSignedIpnsRecord(peerPrivate, Optional.empty(), false);
             ids.addIdentity(peerPrivate, signedRecord);
         } else {
             // make sure we use the latest peerid from the db as the source of truth

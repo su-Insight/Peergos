@@ -14,7 +14,7 @@ import java.util.logging.*;
 public class JdbcServerIdentityStore implements ServerIdentityStore {
 	private static final Logger LOG = Logging.LOG();
 
-    private static final String SELECT_PEERIDS = "SELECT peerid FROM serverids;";
+    private static final String SELECT_PEERIDS = "SELECT peerid FROM serverids ORDER BY id;";
     private static final String SELECT_PRIVATE = "SELECT private FROM serverids WHERE peerid=?;";
     private static final String GET_RECORD = "SELECT record FROM serverids WHERE peerid=?;";
     private static final String SET_RECORD = "UPDATE serverids SET record=? WHERE peerid = ?;";
