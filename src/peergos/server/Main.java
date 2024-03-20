@@ -97,7 +97,7 @@ public class Main extends Builder {
     );
 
 
-    public static final Command<UserService> PEERGOS = new Command<>("daemon",
+    public static final Command<ServerProcesses> PEERGOS = new Command<>("daemon",
             "The user facing Peergos server",
             Main::startPeergos,
             Stream.of(
@@ -256,7 +256,7 @@ public class Main extends Builder {
         }
     }
 
-    public static final Command<UserService> PKI_INIT = new Command<>("pki-init",
+    public static final Command<ServerProcesses> PKI_INIT = new Command<>("pki-init",
             "Bootstrap and start the Peergos PKI Server",
             args -> {
                 try {
@@ -290,7 +290,7 @@ public class Main extends Builder {
                         }
                     }
 
-                    UserService daemon = PEERGOS.main(args);
+                    ServerProcesses daemon = PEERGOS.main(args);
                     poststrap(args);
                     return daemon;
                 } catch (Exception e) {
@@ -322,7 +322,7 @@ public class Main extends Builder {
             )
     );
 
-    public static final Command<UserService> PKI = new Command<>("pki",
+    public static final Command<ServerProcesses> PKI = new Command<>("pki",
             "Start the Peergos PKI Server that has already been bootstrapped",
             args -> {
                 try {
@@ -489,7 +489,7 @@ public class Main extends Builder {
             )
     );
 
-    public static UserService startPeergos(Args a) {
+    public static ServerProcesses startPeergos(Args a) {
         try {
             Crypto crypto = initCrypto();
             Hasher hasher = crypto.hasher;
@@ -744,7 +744,7 @@ public class Main extends Builder {
                 System.out.println("Peergos daemon started. Browse to " + host + "/ to sign up or login. \nRun with -generate-token true to generate a signup token.");
             InstanceAdmin.VersionInfo version = storageAdmin.getVersionInfo().join();
             System.out.println("Running version " + version);
-            return localAPI;
+            return new ServerProcesses(localAPI, p2pAPI, ipfsWrapper);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }

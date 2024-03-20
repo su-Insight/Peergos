@@ -138,7 +138,9 @@ public class ServerIdentity extends Builder {
 
                 return true;
             },
-            Arrays.asList()
+            Arrays.asList(
+                    Main.ARG_SERVERIDS_SQL_FILE
+            )
     );
 
     public static final Command<Boolean> SERVER_IDENTITY = new Command<>("server-identity",

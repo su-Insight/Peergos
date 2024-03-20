@@ -88,6 +88,7 @@ public class UserService {
     public final SpaceUsage usage;
     public final ServerMessager serverMessages;
     public final GarbageCollector gc; // not exposed
+    private HttpServer localhostServer;
 
     public UserService(ContentAddressedStorage storage,
                        BatCave bats,
@@ -122,6 +123,13 @@ public class UserService {
         }
     }
 
+    public void stop() {
+        if (localhostServer != null)
+            localhostServer.stop(0);
+        if (gc != null)
+            gc.stop();
+    }
+
     public boolean initAndStart(InetSocketAddress local,
                                 List<Cid> nodeIds,
                                 Optional<TlsProperties> tlsProps,
@@ -153,7 +161,7 @@ public class UserService {
         LOG.info("Starting local Peergos server at: localhost:"+local.getPort());
         if (tlsProps.isPresent())
             LOG.info("Starting Peergos TLS server on all interfaces.");
-        HttpServer localhostServer = HttpServer.create(local, connectionBacklog);
+        localhostServer = HttpServer.create(local, connectionBacklog);
         HttpsServer tlsServer = ! tlsProps.isPresent() ? null :
                 HttpsServer.create(new InetSocketAddress(allInterfaces, 443), connectionBacklog);
 

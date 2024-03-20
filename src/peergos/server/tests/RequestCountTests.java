@@ -48,7 +48,7 @@ public class RequestCountTests {
 
     @BeforeClass
     public static void init() {
-        service = Main.PKI_INIT.main(args);
+        service = Main.PKI_INIT.main(args).localApi;
     }
 
     @Test
