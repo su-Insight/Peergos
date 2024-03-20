@@ -242,6 +242,11 @@ public class FileContentAddressedStorage implements DeletableContentAddressedSto
     }
 
     @Override
+    public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+        throw new IllegalStateException("Unimplemented!");
+    }
+
+    @Override
     public Stream<Cid> getAllBlockHashes(boolean useBlockstore) {
         return getFiles().stream();
     }

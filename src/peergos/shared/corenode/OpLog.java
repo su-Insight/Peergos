@@ -201,6 +201,11 @@ public class OpLog implements Cborable, Account, MutablePointers, ContentAddress
         throw new IllegalStateException("Unsupported operation!");
     }
 
+    @Override
+    public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+        throw new IllegalStateException("Unimplemented!");
+    }
+
     public static final class BlockWrite implements Cborable {
         public final PublicKeyHash writer;
         public final byte[] signature, block;

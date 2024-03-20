@@ -109,4 +109,9 @@ public class DelayingStorage implements ContentAddressedStorage {
             throw new RuntimeException(e.getMessage(), e);
         }
     }
+
+    @Override
+    public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+        throw new IllegalStateException("Unimplemented!");
+    }
 }

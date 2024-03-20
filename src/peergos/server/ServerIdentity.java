@@ -39,7 +39,7 @@ public class ServerIdentity extends Builder {
                         currentRecord);
                 if (ipnsMapping.isEmpty())
                     throw new IllegalStateException("Invalid record!");
-                ResolutionData res = ResolutionData.fromCbor(CborObject.fromByteArray(ipnsMapping.get().value.value));
+                ResolutionRecord res = ResolutionRecord.fromCbor(CborObject.fromByteArray(ipnsMapping.get().value.value));
                 boolean hasNextId = res.host.isPresent();
                 if (hasNextId) {
                     System.out.println("This server has already generated a next identity");
@@ -76,7 +76,7 @@ public class ServerIdentity extends Builder {
         LocalDateTime expiry = LocalDateTime.now().plusYears(years);
         long ttlNanos = years * 365L * 24 * 3600 * 1000_000_000;
         int sequence = 1;
-        ResolutionData ipnsValue = new ResolutionData(host,
+        ResolutionRecord ipnsValue = new ResolutionRecord(host,
                 moved, Optional.empty(), sequence);
         byte[] value = ipnsValue.serialize();
         return IPNS.createSignedRecord(value, expiry, sequence, ttlNanos, peerPrivate);
@@ -118,7 +118,7 @@ public class ServerIdentity extends Builder {
                         currentRecord);
                 if (ipnsMapping.isEmpty())
                     throw new IllegalStateException("Invalid record!");
-                ResolutionData res = ResolutionData.fromCbor(CborObject.fromByteArray(ipnsMapping.get().value.value));
+                ResolutionRecord res = ResolutionRecord.fromCbor(CborObject.fromByteArray(ipnsMapping.get().value.value));
                 Crypto crypto = Main.initCrypto();
                 PrivKey nextPriv;
                 if (res.host.isPresent()) {

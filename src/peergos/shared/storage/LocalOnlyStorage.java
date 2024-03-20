@@ -104,6 +104,11 @@ public class LocalOnlyStorage implements ContentAddressedStorage {
     }
 
     @Override
+    public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+        throw new IllegalStateException("Unimplemented!");
+    }
+
+    @Override
     public CompletableFuture<List<FragmentWithHash>> downloadFragments(PublicKeyHash owner,
                                                                        List<Cid> hashes,
                                                                        List<BatWithId> bats,

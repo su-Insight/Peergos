@@ -8,10 +8,7 @@ import peergos.shared.cbor.CborObject;
 import peergos.shared.crypto.hash.PublicKeyHash;
 import peergos.shared.io.ipfs.Cid;
 import peergos.shared.io.ipfs.Multihash;
-import peergos.shared.storage.BlockStoreProperties;
-import peergos.shared.storage.ContentAddressedStorage;
-import peergos.shared.storage.RetryStorage;
-import peergos.shared.storage.TransactionId;
+import peergos.shared.storage.*;
 import peergos.shared.storage.auth.*;
 import peergos.shared.util.ProgressConsumer;
 import java.util.*;
@@ -138,6 +135,11 @@ public class RetryStorageTests {
                 counter=1;
                 return CompletableFuture.completedFuture(Optional.empty());
             }
+        }
+
+        @Override
+        public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+            throw new IllegalStateException("Unimplemented!");
         }
     }
 

@@ -184,6 +184,11 @@ public class RAMStorage implements DeletableContentAddressedStorage {
         return CompletableFuture.completedFuture(Optional.of(storage.get(block).length));
     }
 
+    @Override
+    public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+        throw new IllegalStateException("Unimplemented!");
+    }
+
     public static Cid hashToCid(byte[] input, boolean isRaw) {
         byte[] hash = hash(input);
         return new Cid(CID_V1, isRaw ? Cid.Codec.Raw : Cid.Codec.DagCbor, Multihash.Type.sha2_256, hash);

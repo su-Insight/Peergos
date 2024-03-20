@@ -47,7 +47,7 @@ public class ServerIdentityTests {
         Optional<IpnsMapping> prevIpnsMapping = IPNS.parseAndValidateIpnsEntry(
                 ArrayOps.concat("/ipns/".getBytes(StandardCharsets.UTF_8), current.getBytes()),
                 prevRecord);
-        ResolutionData prevRes = ResolutionData.fromCbor(CborObject.fromByteArray(prevIpnsMapping.get().value.value));
+        ResolutionRecord prevRes = ResolutionRecord.fromCbor(CborObject.fromByteArray(prevIpnsMapping.get().value.value));
         Assert.assertEquals(prevRes.moved, true);
         Assert.assertEquals(prevRes.host, Optional.of(Multihash.fromBase58(nextPeerId.toBase58())));
     }

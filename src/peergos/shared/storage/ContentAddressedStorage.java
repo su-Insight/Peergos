@@ -193,6 +193,8 @@ public interface ContentAddressedStorage {
      */
     CompletableFuture<Optional<Integer>> getSize(Multihash block);
 
+    CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer);
+
     default CompletableFuture<Cid> hashToCid(byte[] input, boolean isRaw, Hasher hasher) {
         return hasher.sha256(input)
                 .thenApply(hash -> buildCid(hash, isRaw));
@@ -274,6 +276,7 @@ public interface ContentAddressedStorage {
         public static final String BLOCK_PRESENT = "block/has";
         public static final String BLOCK_STAT = "block/stat";
         public static final String REFS_LOCAL = "refs/local";
+        public static final String IPNS_GET = "ipns/get";
 
         private final boolean isPeergosServer;
         private final Hasher hasher;
@@ -538,6 +541,12 @@ public interface ContentAddressedStorage {
             return poster.get(apiPrefix + BLOCK_STAT + "?stream-channels=true&arg=" + block.toString() + "&auth=letmein")
                     .thenApply(raw -> Optional.of((Integer)((Map)JSONParser.parse(new String(raw))).get("Size")));
         }
+
+        @Override
+        public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+            return poster.get(apiPrefix + IPNS_GET + "?arg=" + signer)
+                    .thenApply(raw -> IpnsEntry.fromJson(JSONParser.parse(new String(raw))));
+        }
     }
 
     class Proxying implements ContentAddressedStorage {
@@ -629,6 +638,11 @@ public interface ContentAddressedStorage {
         @Override
         public CompletableFuture<Optional<Integer>> getSize(Multihash block) {
             return local.getSize(block);
+        }
+
+        @Override
+        public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+            return local.getIpnsEntry(signer);
         }
 
         @Override

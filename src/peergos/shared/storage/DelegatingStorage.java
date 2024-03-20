@@ -85,6 +85,11 @@ public abstract class DelegatingStorage implements ContentAddressedStorage {
     }
 
     @Override
+    public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+        return target.getIpnsEntry(signer);
+    }
+
+    @Override
     public CompletableFuture<List<FragmentWithHash>> downloadFragments(PublicKeyHash owner,
                                                                        List<Cid> hashes,
                                                                        List<BatWithId> bats,

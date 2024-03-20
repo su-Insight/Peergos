@@ -523,6 +523,11 @@ public class S3BlockStorage implements DeletableContentAddressedStorage {
         return getWithBackoff(() -> getSizeWithoutRetry(hash));
     }
 
+    @Override
+    public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+        return bloomTarget.getIpnsEntry(signer);
+    }
+
     private CompletableFuture<Optional<Integer>> getSizeWithoutRetry(Multihash hash) {
         if (hash.isIdentity()) // Identity hashes are not actually stored explicitly
             return Futures.of(Optional.of(0));

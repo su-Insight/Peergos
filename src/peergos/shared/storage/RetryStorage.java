@@ -140,6 +140,11 @@ public class RetryStorage implements ContentAddressedStorage {
     }
 
     @Override
+    public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+        return runWithRetry(() -> target.getIpnsEntry(signer));
+    }
+
+    @Override
     public CompletableFuture<List<FragmentWithHash>> downloadFragments(PublicKeyHash owner,
                                                                        List<Cid> hashes,
                                                                        List<BatWithId> bats,

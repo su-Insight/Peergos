@@ -188,6 +188,11 @@ public class DelegatingDeletableStorage implements DeletableContentAddressedStor
     }
 
     @Override
+    public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
+        return target.getIpnsEntry(signer);
+    }
+
+    @Override
     public CompletableFuture<List<Cid>> getLinks(Cid root) {
         return target.getLinks(root);
     }
