@@ -332,7 +332,7 @@ public class UserContext {
         return network.coreNode.getChain(username)
                 .thenCompose(chain -> network.dhtClient.ids()
                         .thenCompose(ids -> {
-                            Multihash pkiCurrent = chain.get(chain.size() - 1).claim.storageProviders.get(0);
+                            Multihash pkiCurrent = chain.get(chain.size() - 1).claim.storageProviders.get(0).bareMultihash();
                             List<Multihash> peerIds = ids.stream().map(c -> c.bareMultihash()).collect(Collectors.toList());
                             boolean onHome = peerIds.contains(pkiCurrent);
                             Multihash latest = peerIds.get(peerIds.size() - 1);
@@ -915,7 +915,7 @@ public class UserContext {
                                                              NetworkAccess network) {
         LOG.info("updating host for username: " + username + " to " + newHost);
         return network.coreNode.getChain(username).thenCompose(existing -> {
-            List<Multihash> storage = Arrays.asList(newHost);
+            List<Multihash> storage = Arrays.asList(new Cid(1, Cid.Codec.LibP2pKey, newHost.type, newHost.getHash()));
             UserPublicKeyLink.Claim newClaim = UserPublicKeyLink.Claim.build(username, signer.secret, expiry, storage);
             List<UserPublicKeyLink> updated = new ArrayList<>(existing.subList(0, existing.size() - 1));
             updated.add(new UserPublicKeyLink(signer.publicKeyHash, newClaim, Optional.empty()));

@@ -95,12 +95,14 @@ public class MultiNodeNetworkTests {
             server.ipfs.stop();
     }
 
-    private void startServer(int i)  {
+    private void startServer(int i) throws Exception  {
         if (i == 0)
             throw new IllegalStateException("Restarting PKI not yet supported in test");
-        ServerProcesses service = Main.PEERGOS.main(argsToCleanUp.get(i));
+        Args startArgs = argsToCleanUp.get(i);
+        ServerProcesses service = Main.PEERGOS.main(startArgs);
         service.localApi.gc.stop();
         services.set(i, service);
+        nodes.set(i, buildApi(startArgs));
     }
 
     private void rotateServerIdentity(int i)  {
@@ -378,11 +380,13 @@ public class MultiNodeNetworkTests {
     }
 
     @Test
-    public void serverIdentityRotation() {
+    public void serverIdentityRotation() throws Exception {
         if (iNode1 == 0 || iNode2 == 0)
             return; // Don't test migration to/from pki node
 
-        UserContext context = ensureSignedUp(generateUsername(random), randomString(), getNode(iNode1), crypto);
+        String password = randomString();
+        String username = generateUsername(random);
+        UserContext context = ensureSignedUp(username, password, getNode(iNode1), crypto);
         byte[] fileData = new byte[6*1024*1024];
         new Random(28).nextBytes(fileData);
         String filename = "somefile.bin";
@@ -397,12 +401,13 @@ public class MultiNodeNetworkTests {
         rotateServerIdentity(iNode1);
         startServer(iNode1);
 
-        FileWrapper fromOtherServer = getNode(iNode2).getFile(cap, context.username).join().get();
+//        FileWrapper fromOtherServer = getNode(iNode2).getFile(cap, context.username).join().get();
 
         // update owner host and check cap still works from other server
+        context = ensureSignedUp(username, password, getNode(iNode1), crypto);
         context.ensureCurrentHost().join();
         Multihash updatedHost = context.network.coreNode.getHomeServer(context.username).join().get();
-        FileWrapper afterRotation = getNode(iNode2).getFile(cap, context.username).join().get();
         Assert.assertTrue(! updatedHost.equals(originalHost));
+        FileWrapper afterRotation = getNode(iNode2).getFile(cap, context.username).join().get();
     }
 }

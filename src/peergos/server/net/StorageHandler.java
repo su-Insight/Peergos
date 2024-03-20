@@ -251,6 +251,14 @@ public class StorageHandler implements HttpHandler {
                     }).exceptionally(Futures::logAndThrow).get();
                     break;
                 }
+                case IPNS_GET: {
+                    AggregatedMetrics.STORAGE_IPNS_GET.inc();
+                    Multihash signer = Multihash.fromBase58(args.get(0));
+                    dht.getIpnsEntry(signer).thenAccept(rec -> {
+                        replyJson(httpExchange, JSONParser.toString(rec.toJson()), Optional.empty());
+                    });
+                    break;
+                }
                 default: {
                     httpExchange.sendResponseHeaders(404, 0);
                 }

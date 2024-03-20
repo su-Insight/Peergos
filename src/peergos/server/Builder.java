@@ -230,17 +230,17 @@ public class Builder {
                 S3BlockStorage s3 = new S3BlockStorage(config, ipfs.ids().join(), props, transactions, authoriser,
                         meta, cborCache, hasher, p2pBlockRetriever, ipfs);
                 s3.updateMetadataStoreIfEmpty();
-                return s3;
+                return new LocalIpnsStorage(s3, ids);
             } else if (enableGC) {
                 TransactionalIpfs txns = new TransactionalIpfs(ipfs, transactions, authoriser, ipfs.id().join(), hasher);
                 MetadataCachingStorage metabs = new MetadataCachingStorage(txns, meta, hasher);
                 metabs.updateMetadataStoreIfEmpty();
-                return metabs;
+                return new LocalIpnsStorage(metabs, ids);
             } else {
                 AuthedStorage target = new AuthedStorage(ipfs, authoriser, hasher);
                 MetadataCachingStorage metabs = new MetadataCachingStorage(target, meta, hasher);
                 metabs.updateMetadataStoreIfEmpty();
-                return metabs;
+                return new LocalIpnsStorage(metabs, ids);
             }
         } else {
             // In S3 mode of operation we require the ipfs id to be supplied as we don't have a local ipfs running
@@ -258,12 +258,12 @@ public class Builder {
                 S3BlockStorage s3 = new S3BlockStorage(config, ipfs.ids().join(), props, transactions, authoriser,
                         meta, cborCache, hasher, p2pBlockRetriever, bloomTarget);
                 s3.updateMetadataStoreIfEmpty();
-                return s3;
+                return new LocalIpnsStorage(s3, ids);
             } else {
                 FileContentAddressedStorage fileBacked = new FileContentAddressedStorage(blockstorePath(a), transactions, authoriser, hasher);
                 MetadataCachingStorage metabs = new MetadataCachingStorage(fileBacked, meta, hasher);
                 metabs.updateMetadataStoreIfEmpty();
-                return metabs;
+                return new LocalIpnsStorage(metabs, ids);
             }
         }
     }

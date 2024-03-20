@@ -544,7 +544,7 @@ public interface ContentAddressedStorage {
 
         @Override
         public CompletableFuture<IpnsEntry> getIpnsEntry(Multihash signer) {
-            return poster.get(apiPrefix + IPNS_GET + "?arg=" + signer)
+            return poster.get(apiPrefix + IPNS_GET + "?arg=" + signer.toBase58())
                     .thenApply(raw -> IpnsEntry.fromJson(JSONParser.parse(new String(raw))));
         }
     }
