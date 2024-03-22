@@ -5,6 +5,7 @@ import io.libp2p.core.crypto.*;
 import org.peergos.protocol.ipns.pb.*;
 import peergos.server.sql.*;
 import peergos.server.util.Logging;
+import peergos.shared.resolution.*;
 import peergos.shared.storage.*;
 
 import java.sql.*;
@@ -123,12 +124,14 @@ public class JdbcServerIdentityStore implements ServerIdentityStore {
             Ipns.IpnsEntry newEntry = Ipns.IpnsEntry.parseFrom(newRecord);
             IpnsEntry existing = new IpnsEntry(currentEntry.getSignatureV2().toByteArray(), currentEntry.getData().toByteArray());
             IpnsEntry updated = new IpnsEntry(newEntry.getSignatureV2().toByteArray(), newEntry.getData().toByteArray());
-            if (updated.getValue().sequence <= existing.getValue().sequence)
-                throw new IllegalStateException("Invalid update!");
-            if (updated.getValue().sequence != newEntry.getSequence())
+            ResolutionRecord updatedValue = updated.getValue();
+            ResolutionRecord existingValue = existing.getValue();
+
+            if (updatedValue.sequence != newEntry.getSequence())
                 throw new IllegalStateException("Non matching sequence!");
             if (updated.getIpnsSequence() != newEntry.getSequence())
                 throw new IllegalStateException("Non matching sequence!");
+            updatedValue.ensureValidUpdateTo(existingValue);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
