@@ -326,7 +326,7 @@ public class UserContext {
 
     /** Ensure we have signed the current peerid for our home server, verifying any key rotations
      *
-     * @return
+     * @return whether we updated anything
      */
     public CompletableFuture<Boolean> ensureCurrentHost() {
         return network.coreNode.getChain(username)
@@ -337,7 +337,7 @@ public class UserContext {
                             boolean onHome = peerIds.contains(pkiCurrent);
                             Multihash latest = peerIds.get(peerIds.size() - 1);
                             if (! onHome || latest.equals(pkiCurrent))
-                                return Futures.of(true);
+                                return Futures.of(false);
                             // Need to check peerid chain and update our pki entry
                             return getAndVerifyServerIdChain(pkiCurrent, latest)
                                     .thenCompose(x -> updateHostInPki(username, signer, LocalDate.now().plusMonths(2), latest, crypto.hasher, network));
