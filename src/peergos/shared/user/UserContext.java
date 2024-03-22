@@ -328,6 +328,7 @@ public class UserContext {
      *
      * @return whether we updated anything
      */
+    @JsMethod
     public CompletableFuture<Boolean> ensureCurrentHost() {
         return network.coreNode.getChain(username)
                 .thenCompose(chain -> network.dhtClient.ids()
