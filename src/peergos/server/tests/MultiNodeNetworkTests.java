@@ -432,4 +432,35 @@ public class MultiNodeNetworkTests {
         Assert.assertTrue(! updatedHost.equals(originalHost));
         FileWrapper afterRotation = getNode(iNode2).getFile(cap2, context.username).join().get();
     }
+
+    @Test
+    public void loginElsewhereAfterServerIdRotation() throws Exception {
+        if (iNode1 == 0 || iNode2 == 0)
+            return; // Don't test migration to/from pki node
+
+        String password = randomString();
+        String username = generateUsername(random);
+        UserContext context = ensureSignedUp(username, password, getNode(iNode1), crypto);
+        byte[] fileData = new byte[6*1024*1024];
+        new Random(28).nextBytes(fileData);
+
+        Multihash originalHost = context.network.coreNode.getHomeServer(context.username).join().get();
+
+        // rotate server identity, and check file cap works from other server
+        stopServer(iNode1);
+        rotateServerIdentity(iNode1);
+        startServer(iNode1);
+
+        // login through other server
+        ensureSignedUp(username, password, getNode(iNode2), crypto);
+
+        // update owner host and check login still works from other server
+        context = ensureSignedUp(username, password, getNode(iNode1), crypto);
+        context.ensureCurrentHost().join();
+        Multihash updatedHost = context.network.coreNode.getHomeServer(context.username).join().get();
+        Assert.assertTrue(! updatedHost.equals(originalHost));
+
+        // login again through other server
+        ensureSignedUp(username, password, getNode(iNode2), crypto);
+    }
 }
