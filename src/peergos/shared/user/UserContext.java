@@ -358,8 +358,7 @@ public class UserContext {
     }
 
     public ResolutionRecord validateResolutionRecord(IpnsEntry signedRecord, Multihash signer) {
-        signedRecord.verifySignature(signer, crypto);
-        return signedRecord.getValue();
+        return signedRecord.getValue(signer, crypto);
     }
 
     private static byte[] signSpaceRequest(String username, SigningPrivateKeyAndPublicHash identity, long desiredQuota) {
