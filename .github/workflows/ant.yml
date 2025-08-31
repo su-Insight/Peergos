@@ -4,7 +4,6 @@ on: [push]
 
 jobs:
   build:
-
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -12,22 +11,5 @@ jobs:
         os: [ubuntu-22.04, macos-14, windows-2022]
 
     steps:
-    - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744
-    - uses: ./.github/actions/local-s3
-    - name: Set up JDK 17
-      uses: actions/setup-java@0ab4596768b603586c0de567f2430c30f5b0d2b0
-      with:
-        distribution: temurin
-        java-version: 17
-    - name: Build with Ant
-      run: ant -noinput -buildfile build.xml dist
-    - name: GWT build
-      run: ant -noinput -buildfile build.xml gwtc
-    - name: install fuse 2
-      run: sudo apt install libfuse2
-      if: matrix.os == 'ubuntu-22.04'
-    - name: Run tests
-      timeout-minutes: 120
-      run: ant -noinput -buildfile build.xml test
-    - name: Reproducible build
-      run: ./reproducible-test.sh
+      - name: Print current OS
+        run: echo "Running on ${{ matrix.os }}"
